@@ -274,6 +274,12 @@ failsafe is on by default — slamming the cursor into a screen corner aborts.
 
 ## Dashboard Screenshots
 
-![Dashboard overview](docs/images/dashboard-overview.png)
+![Dashboard home](docs/images/dashboard-home.png)
 
-![Submit task panel](docs/images/dashboard-submit-task.png)
+![Task audit view](docs/images/dashboard-tasks.png)
+
+![Pipeline builder](docs/images/dashboard-builder.png)
+
+![Template library](docs/images/dashboard-templates.png)
+
+![Dashboard settings](docs/images/dashboard-settings.png)
