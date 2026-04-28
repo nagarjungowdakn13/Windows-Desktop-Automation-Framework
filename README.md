@@ -270,5 +270,10 @@ failsafe is on by default — slamming the cursor into a screen corner aborts.
 - Screenshots on failure are stored under `screenshots/` with the timestamp and a `fail_<task>_<step>` label, and the path is recorded on the failing `step_logs` row.
 - Logs rotate at 5 MB × 5 files in `logs/automation.log`.
 
+---
 
+## Dashboard Screenshots
 
+![Dashboard overview](docs/images/dashboard-overview.png)
+
+![Submit task panel](docs/images/dashboard-submit-task.png)
