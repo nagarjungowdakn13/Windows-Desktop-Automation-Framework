@@ -78,7 +78,7 @@ def list_tasks(limit: int = typer.Option(20, help="Max rows to show.")) -> None:
 
 @app.command()
 def cancel(task_id: str) -> None:
-    """Cancel a queued task. Running tasks cannot be interrupted."""
+    """Cancel a pending task. Running tasks cannot be interrupted."""
     with _client() as http:
         resp = http.post(f"/cancel/{task_id}")
     if resp.status_code >= 400:

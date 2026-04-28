@@ -312,7 +312,7 @@ DASHBOARD_HTML = r"""<!doctype html>
   .b-success { color: var(--green); background: var(--green-bg); }
   .b-failed { color: var(--red); background: var(--red-bg); }
   .b-running { color: var(--blue); background: var(--blue-bg); }
-  .b-queued { color: var(--amber); background: var(--amber-bg); }
+  .b-pending { color: var(--amber); background: var(--amber-bg); }
   .b-cancelled { color: var(--grey); background: var(--grey-bg); }
 
   .detail-grid {
@@ -665,7 +665,7 @@ DASHBOARD_HTML = r"""<!doctype html>
             <div class="filters">
               <div class="chips" id="statusChips" role="tablist">
                 <button class="chip" data-status="" aria-pressed="true">All</button>
-                <button class="chip" data-status="queued" aria-pressed="false">Queued</button>
+                <button class="chip" data-status="pending" aria-pressed="false">Pending</button>
                 <button class="chip" data-status="running" aria-pressed="false">Running</button>
                 <button class="chip" data-status="success" aria-pressed="false">Success</button>
                 <button class="chip" data-status="failed" aria-pressed="false">Failed</button>
@@ -787,7 +787,7 @@ DASHBOARD_HTML = r"""<!doctype html>
     success:  "var(--green)",
     failed:   "var(--red)",
     running:  "var(--blue)",
-    queued:   "var(--amber)",
+    pending:  "var(--amber)",
     cancelled:"var(--grey)"
   };
   const ICON_BUBBLE = {
@@ -1087,7 +1087,7 @@ DASHBOARD_HTML = r"""<!doctype html>
     const cards = [
       { label:"Total runs", value:s.total || 0, sub:(s.last_task_at ? "last " + fmtTime(s.last_task_at) : "no runs yet"), icon:"i-tasks", color:"" },
       { label:"Running",    value:c.running || 0, sub:(s.running_task_id ? s.running_task_id.slice(0,8) + "…" : "idle"), icon:"s-launch_app", color:"blue" },
-      { label:"Queue depth",value:s.queue_depth || 0, sub:(c.queued || 0) + " queued", icon:"i-tasks", color:"amber" },
+      { label:"Queue depth",value:s.queue_depth || 0, sub:(c.pending || c.queued || 0) + " pending", icon:"i-tasks", color:"amber" },
       { label:"Success rate", value: rate + "%", sub: success + " ok / " + failed + " fail", icon:"s-screenshot", color:"green" }
     ];
     $("statCards").innerHTML = cards.map(card => `
@@ -1170,7 +1170,7 @@ DASHBOARD_HTML = r"""<!doctype html>
       { k:"success", v: c.success || 0 },
       { k:"failed",  v: c.failed || 0 },
       { k:"running", v: c.running || 0 },
-      { k:"queued",  v: c.queued || 0 },
+      { k:"pending", v: c.pending || c.queued || 0 },
       { k:"cancelled", v: c.cancelled || 0 }
     ];
     const total = data.reduce((a, b) => a + b.v, 0);
@@ -1292,7 +1292,7 @@ DASHBOARD_HTML = r"""<!doctype html>
     if (!d) return renderEmptyDetail();
     const stepCount = (d.steps || []).length;
     const completed = (d.steps || []).filter(s => s.finished_at).length;
-    const isQueued = d.status === "queued";
+    const isQueued = d.status === "pending";
     const isTerminal = ["success","failed","cancelled"].includes(d.status);
     const screenshots = (d.steps || []).filter(s => s.screenshot_path);
 

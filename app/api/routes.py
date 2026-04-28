@@ -11,7 +11,7 @@ from sqlalchemy import text
 
 from app import __version__
 from app.core.config import settings
-from app.core.exceptions import TaskNotFoundError
+from app.core.exceptions import IdempotencyConflictError, TaskNotFoundError
 from app.core.logger import get_logger
 from app.db.database import engine
 from app.schemas.task import (
@@ -39,14 +39,19 @@ _service = TaskService()
 @router.post("/run-task", response_model=TaskSubmittedResponse, status_code=status.HTTP_202_ACCEPTED)
 async def run_task(payload: TaskRequest, request: Request) -> TaskSubmittedResponse:
     """Persist the task and enqueue it for execution."""
-    task_id = _service.create(payload)
+    idempotency_key = request.headers.get("Idempotency-Key")
+    try:
+        created = _service.create_task(payload, idempotency_key=idempotency_key)
+    except IdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     worker = request.app.state.worker
     try:
-        await worker.submit(task_id)
+        if not created.existing:
+            await worker.submit(created.task_id)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("failed to enqueue task %s", task_id)
+        logger.exception("failed to enqueue task %s", created.task_id)
         raise HTTPException(status_code=503, detail=f"worker unavailable: {exc}") from exc
-    return TaskSubmittedResponse(task_id=task_id, status="queued")
+    return TaskSubmittedResponse(task_id=created.task_id, execution_id=created.execution_id, status=created.status.value)
 
 
 @router.get("/status/{task_id}", response_model=TaskStatusResponse)
@@ -64,7 +69,7 @@ async def list_tasks(
     status_filter: Optional[str] = Query(
         None,
         alias="status",
-        description="Filter by status: queued | running | success | failed | cancelled.",
+        description="Filter by status: pending | running | retrying | success | failed | cancelled.",
     ),
     q: Optional[str] = Query(None, description="Case-insensitive substring match on name or id."),
 ) -> List[TaskSummary]:
@@ -83,9 +88,29 @@ async def get_logs(task_id: str) -> TaskStatusResponse:
         raise HTTPException(status_code=404, detail=f"task '{task_id}' not found") from exc
 
 
+@router.post("/rerun/{task_id}", response_model=TaskSubmittedResponse, status_code=status.HTTP_202_ACCEPTED)
+async def rerun(
+    task_id: str,
+    request: Request,
+    resume_from_failed_step: bool = Query(False),
+) -> TaskSubmittedResponse:
+    """Create a new execution from an existing task, optionally resuming at its first failed step."""
+    try:
+        created = _service.rerun(task_id, resume_from_failed_step=resume_from_failed_step)
+    except TaskNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"task '{task_id}' not found") from exc
+    await request.app.state.worker.submit(created.task_id)
+    return TaskSubmittedResponse(
+        task_id=created.task_id,
+        execution_id=created.execution_id,
+        status=created.status.value,
+        message="Task re-run accepted and queued.",
+    )
+
+
 @router.post("/cancel/{task_id}", response_model=CancelResponse)
 async def cancel(task_id: str) -> CancelResponse:
-    """Cancel a queued task. Running tasks cannot be interrupted mid-step."""
+    """Cancel a pending task. Running tasks cannot be interrupted mid-step."""
     try:
         cancelled, current_status, message = _service.cancel(task_id)
     except TaskNotFoundError as exc:

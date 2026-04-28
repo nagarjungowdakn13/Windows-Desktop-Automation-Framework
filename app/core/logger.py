@@ -11,6 +11,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 from app.core.config import settings
+from app.core.json_logger import JsonFormatter
 
 
 _LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
@@ -25,7 +26,11 @@ def _configure_root() -> None:
         return
 
     settings.ensure_dirs()
-    formatter = logging.Formatter(_LOG_FORMAT, _DATE_FORMAT)
+    formatter: logging.Formatter
+    if settings.log_format.lower() == "json":
+        formatter = JsonFormatter()
+    else:
+        formatter = logging.Formatter(_LOG_FORMAT, _DATE_FORMAT)
 
     console = logging.StreamHandler()
     console.setFormatter(formatter)

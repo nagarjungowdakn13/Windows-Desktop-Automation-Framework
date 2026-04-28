@@ -42,7 +42,7 @@ def test_create_and_get_status(isolated_db: None) -> None:
     status = svc.get_status(task_id)
     assert status.id == task_id
     assert status.name == "alpha"
-    assert status.status == TaskStatus.QUEUED.value
+    assert status.status == TaskStatus.PENDING.value
     assert status.steps == []
 
 
@@ -63,7 +63,7 @@ def test_list_tasks_filter_by_status(isolated_db: None) -> None:
     cancelled_id = svc.create(_request("c"))
     svc.cancel(cancelled_id)
 
-    queued = svc.list_tasks(status="queued")
+    queued = svc.list_tasks(status="pending")
     cancelled = svc.list_tasks(status="cancelled")
     assert {t.id for t in queued} == {queued_id}
     assert {t.id for t in cancelled} == {cancelled_id}
@@ -86,7 +86,24 @@ def test_stats_reflects_status_counts(isolated_db: None) -> None:
 
     stats = svc.stats(queue_depth=2, running_task_id=queued_id)
     assert stats.total == 2
-    assert stats.by_status["queued"] == 1
+    assert stats.by_status["pending"] == 1
     assert stats.by_status["cancelled"] == 1
     assert stats.queue_depth == 2
     assert stats.running_task_id == queued_id
+
+
+def test_idempotency_reuses_same_execution(isolated_db: None) -> None:
+    svc = TaskService()
+    first = svc.create_task(_request("same"), idempotency_key="abc")
+    second = svc.create_task(_request("same"), idempotency_key="abc")
+    assert second.existing is True
+    assert second.task_id == first.task_id
+    assert second.execution_id == first.execution_id
+
+
+def test_created_task_has_initial_execution_metadata(isolated_db: None) -> None:
+    svc = TaskService()
+    created = svc.create_task(_request("meta"))
+    status = svc.get_status(created.task_id)
+    assert status.execution_id == created.execution_id
+    assert status.status == TaskStatus.PENDING.value

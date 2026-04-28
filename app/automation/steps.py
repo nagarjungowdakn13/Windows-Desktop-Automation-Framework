@@ -16,7 +16,8 @@ from typing import Any, Dict, Mapping
 import pyautogui
 
 from app.core.config import settings
-from app.core.exceptions import StepExecutionError, UnknownStepTypeError
+from app.automation.registry import ACTION_REGISTRY
+from app.core.exceptions import PermanentStepError, StepExecutionError, TransientStepError, UnknownStepTypeError
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +45,7 @@ class StepHandler(ABC):
     @staticmethod
     def _required(params: Mapping[str, Any], key: str) -> Any:
         if key not in params:
-            raise StepExecutionError(
+            raise PermanentStepError(
                 step_type=params.get("__type__", "?"),
                 message=f"missing required parameter '{key}'",
             )
@@ -77,7 +78,7 @@ class LaunchAppHandler(StepHandler):
         try:
             proc = subprocess.Popen(cmd, shell=False)
         except (FileNotFoundError, OSError) as exc:
-            raise StepExecutionError(self.type_name, f"failed to launch {path}: {exc}", original=exc)
+            raise PermanentStepError(self.type_name, f"failed to launch {path}: {exc}", original=exc)
 
         wait = float(params.get("wait_seconds", 1.0))
         if wait > 0:
@@ -108,7 +109,7 @@ class CloseAppHandler(StepHandler):
             if result.returncode == 128 and "not found" in message.lower():
                 logger.info("close_app: process already absent: %s", image_name)
                 return {"stdout": result.stdout.strip(), "already_absent": True}
-            raise StepExecutionError(
+            raise TransientStepError(
                 self.type_name,
                 f"taskkill exit={result.returncode}: {message}",
             )
@@ -140,7 +141,7 @@ class ClickHandler(StepHandler):
             confidence = float(params.get("confidence", 0.9))
             location = pyautogui.locateCenterOnScreen(params["image"], confidence=confidence)
             if location is None:
-                raise StepExecutionError(
+                raise TransientStepError(
                     self.type_name, f"image not found on screen: {params['image']}"
                 )
             x, y = int(location.x), int(location.y)
@@ -198,7 +199,7 @@ class HotkeyHandler(StepHandler):
     def execute(self, params: Mapping[str, Any]) -> Dict[str, Any]:
         keys = self._required(params, "keys")
         if not isinstance(keys, (list, tuple)) or not keys:
-            raise StepExecutionError(self.type_name, "'keys' must be a non-empty list")
+            raise PermanentStepError(self.type_name, "'keys' must be a non-empty list")
         logger.info("hotkey: %s", "+".join(str(k) for k in keys))
         pyautogui.hotkey(*[str(k) for k in keys])
         return {"keys": list(keys)}
@@ -394,6 +395,10 @@ def _build_registry() -> Dict[str, StepHandler]:
 
 
 STEP_HANDLERS: Dict[str, StepHandler] = _build_registry()
+for _handler in STEP_HANDLERS.values():
+    ACTION_REGISTRY.register(_handler)
+ACTION_REGISTRY.register(STEP_HANDLERS["launch_app"], "open_app")
+ACTION_REGISTRY.register(STEP_HANDLERS["type_text"], "type")
 
 
 def get_handler(step_type: str) -> StepHandler:

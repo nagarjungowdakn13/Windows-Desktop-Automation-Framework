@@ -29,6 +29,7 @@ class BackgroundWorker:
 
     def __init__(self, runner: TaskRunner | None = None) -> None:
         self._queue: asyncio.Queue[str] = asyncio.Queue(maxsize=settings.worker_queue_size)
+        self._queued_ids: set[str] = set()
         self._runner = runner or TaskRunner()
         self._task: Optional[asyncio.Task[None]] = None
         self._stopping = asyncio.Event()
@@ -69,8 +70,17 @@ class BackgroundWorker:
     # ---------------------------------------------------------------- enqueue
 
     async def submit(self, task_id: str) -> None:
-        """Enqueue a task id. Raises ``asyncio.QueueFull`` if the queue is full."""
+        """Enqueue a task id once.
+
+        The worker remains single-consumer because pyautogui controls the one
+        active mouse/keyboard session. The set prevents duplicate queue entries
+        for the same task id when clients retry a submission.
+        """
+        if task_id in self._queued_ids or task_id == self._running_task_id:
+            logger.info("task %s is already queued/running", task_id)
+            return
         await self._queue.put(task_id)
+        self._queued_ids.add(task_id)
         logger.info("queued task %s (depth=%d)", task_id, self._queue.qsize())
 
     # ----------------------------------------------------------------- worker
@@ -81,6 +91,7 @@ class BackgroundWorker:
             if task_id == _STOP_SENTINEL:
                 break
             try:
+                self._queued_ids.discard(task_id)
                 if self._was_cancelled(task_id):
                     logger.info("skipping cancelled task %s", task_id)
                     continue

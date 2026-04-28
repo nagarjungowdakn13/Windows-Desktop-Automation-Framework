@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=PROJECT_ROOT / "data")
     log_dir: Path = Field(default=PROJECT_ROOT / "logs")
     screenshot_dir: Path = Field(default=PROJECT_ROOT / "screenshots")
+    log_format: str = Field(default="json", description="'json' or 'text'.")
 
     # --- Database -----------------------------------------------------------
     database_url: str = Field(
