@@ -1,0 +1,37 @@
+{
+  "name": "paint-doodle-and-screenshot",
+  "description": "Open Paint, drag a line, scroll, screenshot, and close.",
+  "tags": ["demo", "drag", "scroll"],
+  "steps": [
+    {
+      "type": "launch_app",
+      "params": { "path": "mspaint.exe", "wait_seconds": 2.0 }
+    },
+    {
+      "type": "drag",
+      "params": { "from_x": 400, "from_y": 400, "to_x": 800, "to_y": 600, "duration": 0.6 }
+    },
+    {
+      "type": "drag",
+      "params": { "from_x": 800, "from_y": 400, "to_x": 400, "to_y": 600, "duration": 0.6 }
+    },
+    {
+      "type": "scroll",
+      "params": { "clicks": -3 }
+    },
+    {
+      "type": "wait",
+      "params": { "seconds": 0.4 }
+    },
+    {
+      "type": "screenshot",
+      "params": { "label": "paint_doodle" },
+      "timeout_seconds": 5
+    },
+    {
+      "type": "close_app",
+      "params": { "image_name": "mspaint.exe", "force": true },
+      "on_failure": "continue"
+    }
+  ]
+}

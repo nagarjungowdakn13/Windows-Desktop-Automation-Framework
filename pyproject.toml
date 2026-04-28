@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "windows-desktop-automation"
+version = "1.0.0"
+description = "Production-grade Windows desktop automation framework with FastAPI backend, JSON pipelines, retries, and background workers."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Automation Team" }]
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "SQLAlchemy>=2.0",
+    "pyautogui>=0.9.54",
+    "Pillow>=10.4",
+    "typer>=0.12",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+wda = "cli.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["app*", "cli*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

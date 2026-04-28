@@ -1,0 +1,26 @@
+{
+  "name": "open-calculator-and-add",
+  "steps": [
+    {
+      "type": "launch_app",
+      "params": { "path": "calc.exe", "wait_seconds": 1.5 }
+    },
+    {
+      "type": "type_text",
+      "params": { "text": "12+30=", "interval": 0.05 }
+    },
+    {
+      "type": "wait",
+      "params": { "seconds": 0.5 }
+    },
+    {
+      "type": "screenshot",
+      "params": { "label": "calc_result" }
+    },
+    {
+      "type": "close_app",
+      "params": { "image_name": "Calculator.exe", "force": true },
+      "on_failure": "continue"
+    }
+  ]
+}
