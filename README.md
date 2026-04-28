@@ -269,3 +269,6 @@ failsafe is on by default — slamming the cursor into a screen corner aborts.
 - The API returns `202 Accepted` immediately after enqueueing. Use `GET /status/{task_id}` (or `cli watch`) to follow progress.
 - Screenshots on failure are stored under `screenshots/` with the timestamp and a `fail_<task>_<step>` label, and the path is recorded on the failing `step_logs` row.
 - Logs rotate at 5 MB × 5 files in `logs/automation.log`.
+
+
+
